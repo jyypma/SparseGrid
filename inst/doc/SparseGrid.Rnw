@@ -1,0 +1,269 @@
+\documentclass[a4paper]{article}
+\usepackage[english]{babel}
+\usepackage{apacite}
+\usepackage{graphicx}
+
+% \VignetteIndexEntry{Introduction to SparseGrid}
+% \VignetteKeyword{optimize}
+% \VignetteKeyword{interface}
+
+\SweaveOpts{keep.source=TRUE}
+\SweaveOpts{prefix.string = figs/plot, eps = FALSE, pdf = TRUE, tikz = FALSE}
+
+
+\title{Introduction to \texttt{SparseGrid}
+\thanks{This package should be considered in beta and comments about any aspect of the package are welcome. This document is an R vignette prepared with the aid of \texttt{Sweave}, Leisch(2002).}}
+\author{Jelmer Ypma}
+
+\begin{document}
+
+\maketitle
+\nocite{Leisch2002}
+
+\DefineVerbatimEnvironment{Sinput}{Verbatim}{xleftmargin=2em}
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{xleftmargin=2em}
+\DefineVerbatimEnvironment{Scode}{Verbatim}{xleftmargin=2em}
+\fvset{listparameters={\setlength{\topsep}{0pt}}}
+\renewenvironment{Schunk}{\vspace{\topsep}}{\vspace{\topsep}}
+
+
+<<setSweaveOptions,echo=FALSE>>=
+# have an (invisible) initialization noweb chunk
+# to remove the default continuation prompt '>'
+options(continue = " ")
+options(width = 60)
+
+# eliminate margin space above plots
+options(SweaveHooks=list(fig=function()
+    par(mar=c(5.1, 4.1, 1.1, 2.1))))
+@
+
+\begin{abstract}
+This vignette describes how to use \texttt{SparseGrid}, which is an R translation\footnote{Florian Heiss and Viktor Winschel kindly provided permission to make this R package based on their Matlab version publicly available.} of the Matlab code on \texttt{http://www.sparse-grids.de} \cite{HeissWinschel2008}. Sparse grids can be used to numerically approximate integrals of high dimension, with fewer nodes than grids constructed by a product rule.
+\end{abstract}
+
+\section{Introduction}
+Integrals arise in many places in statistics, for instance when calculating likelihood contributions in latent variable models (where some of the underlying variables are not observed), or when calculating conditional expectations or moments of functions of random variables. When an analytic solution to these integrals is not available, they have to be evaluated numerically. There are many texts providing a description of how to numerically approximate integrals \cite<e.g. see>[for an introduction to different approximation methods]{Judd1998,MirandaFackler2002}. Basically, many of the methods to approximate an integral in 1 dimension, rewrite the integral as a weighted sum
+\[
+\int_{\Omega} g(x)f(x)dx \approx \sum_{r=1}^R w_r g(x_r),
+\]
+where $\Omega$ is the domain that we'd like to integrate over. The function $g(x)$ is the function of interest, and $f(x)$ is a weighting function. In statistics $f(x)$ will usually be the probability density function of $x$. For instance, if we're interested in the mean of $x$, where $x$ is normally distributed, then we can write this as an integral
+\[
+E\left[ x \right] = \int_{-\infty}^{\infty} \underbrace{x \vphantom{\frac{1}{\sqrt{2\pi\sigma}}} }_{g(x)} \cdot \underbrace{\frac{1}{\sqrt{2\pi\sigma}} e^{\frac{(x-\mu)^2}{2\sigma^2}}}_{f(x)} dx.
+\]
+For this choice of $g(x)$ there is of course a closed-form solution, but the integral has to be approximated numerically for more complicated functions $g(x)$. Depending on the function $f(\cdot)$, there are standard (quadrature) rules to choose $w_r$, referred to as \textbf{weights}, and $x_r$, referred to as \textbf{nodes}.
+
+Four quadrature rules are included with \texttt{SparseGrid}. The first two, \texttt{GQU} and \texttt{KPU}, can be used for unweighted integration on a unit domain, $\Omega = [0,1]^D, f(x) = 1$. These can be used if the random variables that we want to integrate out have a uniform distribution, since $f(x)=1$ is the probability density function of a uniformly distributed random variable. The other two quadrature rules, \texttt{GQN} and \texttt{KPN}, can be used to approximate a Guassian-weighted integral on $\mathcal{R}^D$.
+
+\section{Integration over multiple dimensions}
+In multiple dimensions, a straightforward way to combine the nodes and weights of single dimensions, is by using a product rule. The nodes of the multidimensional approximation are the kronecker product of the separate dimensions
+\[
+x = x_1 \otimes x_2 \otimes \cdots \otimes x_D,
+\]
+where $D$ is the number of dimensions. For instance, for two dimensions
+\[
+x = x_1 \otimes x_2 = 
+\left( 
+\begin{array}[2]{cc}
+x_{1,1} & x_{2,1} \\
+x_{1,1} & x_{2,2} \\
+\vdots  & \vdots  \\
+x_{1,1} & x_{2,R_2} \\
+x_{1,2} & x_{2,1} \\
+\vdots  & \vdots  \\
+x_{1,2} & x_{2,R_2} \\
+\vdots  & \vdots \\
+x_{1,R_1} & x_{2,R_2}
+\end{array}
+\right),
+\]
+where $x_{d,k}$ is the $k$-th node in dimension $d$. For the two-dimensional example, the total number of integration nodes is $R_1 \cdot R_2$. In general, when we have $R$ nodes in each dimension, the number of nodes needed to approximate a $D$ dimensional integral is $R^D$.
+\begin{table}[htbp]
+\begin{center}
+\caption{Number of nodes used by SGI or product rule, $k=5$, type=\texttt{GQU}}
+\label{tab:NumNodesSparseGrid}
+<<NumberOfGridPoints, eval=TRUE, echo=FALSE, results=tex>>=
+# load library
+library('SparseGrid')
+
+# generate number of grid points
+num.dims <- 9
+accuracy <- 5
+tab1 <- sapply( 1:num.dims, 
+    function(d) { 
+        x <- createSparseGrid( 'GQU', 
+                                dimension=d, 
+                                k=accuracy )
+        return( c( length( x$weights ), accuracy^d ) )
+    } )
+
+# write header for LaTeX table
+cat( "\\begin{tabular}[", 1 + ncol(tab1), "]{l|", paste(rep("r", ncol(tab1)), collapse=''), "}
+\\hline \\hline \n", sep='')
+
+cat( "$D$    & ", paste( 1:ncol(tab1), sep='', collapse=" & " ), "\\\\\\hline \n")
+cat( paste( c("SGI", tab1[1,]), collapse=' & ' ), "\\\\ \n")
+cat( paste( c("$k^D$", tab1[2,]), collapse=' & ' ), "\\\\ \n")
+
+# write footer
+cat("\\hline\\hline \n\\end{tabular} \n")
+@
+\end{center}
+\end{table}
+
+\citeA{HeissWinschel2008} describe how sparse grids can be used to approximate multi-dimensional integrals, that occur for instance in estimation problems\footnote{Another way to deal with the curse of dimensionality is to use Monte Carlo metohds to approximate the integral.}. As an example they compare different ways of approximating the high-dimensional integrals that arise in mixed logit models. 
+
+The benefit of using sparse grids, is that fewer integration nodes are needed than in the case of the product rule, except for low dimensional integrals. Table \ref{tab:NumNodesSparseGrid} shows the number of nodes that are needed for the two methods for different dimensions. For instance, in 8 dimensions the product rule uses \Sexpr{tab1[1,8]} integration nodes and sparse grid integration requires \Sexpr{tab1[2,8]} nodes.
+
+Of course, this reduction in number of integration nodes comes at a cost <see>[for details]{HeissWinschel2008}. The parameter, $k$, in table \ref{tab:NumNodesSparseGrid} controls the accuracy of the approximation. A sparse grid of accuracy $k$ can accurately integrate the function $g(x)$ if $g(x)$ is a polynomial of total order $2k-1$. For example, the polynomial
+\[
+a_1 x_1^3 + a_2 x_1^2x_2 + a_3 x_1x_2^2 + + a_4x_1 + a_5x_2^2 + a_6 x_2^2 + a_7x_2^3,
+\]
+is of total order $3$, since the maximum of the sum of the exponents in each term is $3$. The product rule grid based on the same one-dimensional quadrature nodes is accurate for higher dimensions, terms such as $x_1^3x_2^2, x_1^3x_2^3, x_1x_2^3$ can also occur. Since these higher orders grow exponentially\footnote{If there are 5 dimensions, the tensor product of the same univariate integration grid is also exact for the term $x_1^3x_2^3x_3^3x_4^3x_5^3$. The total order of this term is 15, and grows with the dimension of the integration.}, the number of nodes needed to approximate this polynomial without error grows exponentially. The number of nodes used in sparse grid integration are smaller by bounding the total order of the polynomial that is integrated exactly. This difference in accuracy is the reason why sparse grids contain less nodes then grids constructed by the product rule.
+
+For general problems you usually want to approximate integrals of functions $g(x)$ that can not be written as a polynomial. However, the function $g(x)$ might be well approximated by a low-order polynomial. In these cases it is good practice to check if the approximation to the integral is accurate enough for your specific problem. One way to get a sense of the accuracy of the approximation, is to compare approximations obtained using different grids. For instance by increasing the number of nodes, using sparse grids, product rule grids or Monte Carlo grids with different seeds for the random number generator.
+
+\section{Installation}
+The package can be installed from CRAN
+<<InstallSparseGrid, eval=FALSE>>=
+install.packages('SparseGrid')
+@
+After which you should be able to load the package using
+<<LoadSparseGrid, eval=FALSE>>=
+library('SparseGrid')
+@
+And get help for the main function with
+<<HelpSparseGrid, eval=FALSE>>=
+?SparseGrid
+@
+Information on how to cite the original paper on which this code is based is obtained through
+<<CiteSparseGrid, eval=TRUE>>=
+citation('SparseGrid')
+@
+
+\section{Overview of available functions}
+There are four different functions to create grids for integration. Each of these functions returns a list with two elements; \texttt{nodes}, a matrix of nodes, and \texttt{weights}, a vector of weights. More information can be obtained from their respective help pages.
+<<HelpFunctions, eval=FALSE>>=
+?createSparseGrid
+?createProductRuleGrid
+?createMonteCarloGrid
+?createIntegrationGrid
+@
+
+Another function that is included in the packages is \texttt{readASCGrid}, which can be used to read files with integration grids as available on the website \texttt{http://www.sparse-grids.de}.
+
+\section{Example}
+This section contains an example based on the one available from \texttt{http://www.sparse-grids.de}. The example shows how to approximate an integral with sparse grids, and compares it to approximating the same integral using Monte Carlo simulation. The integral that we want to approximate is
+\[
+\mathcal{I} = \int_0^1 \cdots \int_0^1 \underbrace{ \left( \prod_{d=1}^D \frac{1}{\sqrt{2\pi}}e^{-\frac{1}{2}x_d^2} \right) }_{g(x)} dx_D\cdots dx_1.
+\]
+The integration domain of this function is $[0,1]^D$ and we can use a unit weighting function $f(x) = 1$, so we can use the \texttt{KPU} or \texttt{GQU} methods to create sparse grids for numerical approximation of the integral. 
+
+First, load the library,
+<<loadLibrary>>=
+library('SparseGrid')
+@
+and create a sparse grid of \texttt{dimension = }\Sexpr{dimension=10}, and with accuracy \texttt{k = }\Sexpr{k=2}
+<<createSparseGrid>>=
+dimension <- 10
+k         <- 2
+sgrid     <- createSparseGrid( type='KPU', dimension=dimension, k=k )
+@
+This grid has
+<<numberSparseGridNodes>>=
+length( sgrid$weights ) 
+@
+nodes for the chosen accuracy. Usually we only have to create this grid once at the beginning of an estimation procedure, and can re-use the same grid to approximate different integrals (e.g. the likelihood contributions of different individuals, or the approximation to an integral in different iterations of an optimization method).
+
+Then, we define the function \texttt{g} in R that calculates the function $g(x)$ defined above at a given point \texttt{x}
+<<defineFunction>>=
+g <- function( x, mu=0, sigma=1 ) {
+    return( prod( exp(-.5*((x-mu)/sigma)^2)/sqrt(2*pi*sigma^2) ) )
+}
+@
+Note that this function only works on one gridpoint at a time. Because we want to evaluate the function at many gridpoints (each row in \texttt{sgrid\$nodes} is a separate gridpoint), we write this convenience function that performs the approximation.
+<<defineApproximationFunction>>=
+approximate.integral <- function( func, sgrid, ... ) {
+    gx <- apply( sgrid$nodes, 1, function(x) { func(x, ...) } )
+    return( sum( gx * sgrid$weights )  )
+}
+@
+The first line of this function loops over the rows (gridpoints) of the integration grid and evaluates the function at each gridpoint. This results in a vector \texttt{gx}. We then multiply this vector by the corresponding weights and take the sum. This weighted sum is our approximation to the integral.
+<<approximateSGIntegral>>=
+sigma <- 2
+approximate.integral( g, sgrid, mu=0, sigma=sigma )
+@
+
+In R we can get the `exact' solution\footnote{\texttt{pnorm} itself is not completely exact, but is an approximation using the erf-function.} using
+<<defineTrueValue>>=
+trueval <-
+    ( pnorm( 1, mean=0, sd=2 ) - pnorm( 0, mean=0, sd=sigma ) )^dimension
+@
+so we can compare the approximation using different accuracies for the sparse grid, and the Monte Carlo integration with the `true' value.
+
+We can also approximate the integral using a grid of \texttt{num.sim = }\Sexpr{num.sim = 1000} random points drawn from the uniform distribition
+<<createMCGrid>>=
+num.sim <- 1000
+set.seed( 3141 )
+mcgrid <- createMonteCarloGrid( 
+                runif, dimension=dimension, num.sim=num.sim )
+@
+and evaluate the function that we want to integrate over to get an approximation by Monte Carlo simulation
+<<approximateMCIntegral>>=
+approximate.integral( g, mcgrid, mu=0, sigma=sigma )
+@
+
+Below, we compare the error for this specific case for different accuracies of the sparse grid. The number of nodes used in the Monte Carlo approximation to the integral are the same as the number of nodes in the sparse grid. This enables us to compare the error of both methods when the computation time is the same, since conditional on the number of integration nodes, the computation time for the two methods is the same.
+
+First we set the random seed, the dimension of the integration and the maximum accuracy level for which we want to approximate the integral.
+<<defineParameters>>=
+set.seed( 3141 )
+dimension   <- 10   # dimension of integral
+maxk        <- 4    # max. accuracy level (pol. exactness wil be 2k-1)
+@
+
+Then we create a matrix of the right dimensions that will hold the results.
+<<initResultMatrix>>=
+# create matrix to hold results
+res <- matrix( NA, nrow=maxk-1, ncol=5 )
+colnames( res ) <- c("D", "k", "nodes", "SG error", "MC error")
+rownames( res ) <- rep( "", maxk-1 )
+@
+
+The comparision is performed by looping over the requested accuracy levels. For each accuracy level we create a sparse grid, and do the approximation and calculate the approximation error by comparing the approximated value to the `true' value. Since Monte Carlo approximations are different for each seed of the random generator, we use the mean of 1000 approximated values and calculate the approximation error based on this mean. The results are then saved in \texttt{res}.
+<<performComparison>>=
+# loop over different accuracy levels
+for ( k in 2:maxk ) {
+
+    # sparse grid integration
+    sgrid   <- createSparseGrid('KPU', dimension, k)
+    SGappr  <- approximate.integral( g, sgrid, mu=0, sigma=sigma )
+    SGerror <- sqrt((SGappr - trueval)^2) / trueval
+    
+    # Monte Carlo integration with the same number of nodes
+    # 1000 simulation repetitions
+    num.nodes <- length( sgrid$weights )
+    MCappr    <- rep(0, 1000)
+    for (r in 1:1000) {
+        mcgrid      <- createMonteCarloGrid( 
+                            runif, 
+                            dimension=dimension, 
+                            num.sim=num.nodes )
+        MCappr[ r ] <- approximate.integral( 
+                            g, mcgrid, mu=0, sigma=sigma )
+    }
+    MCerror = sqrt(mean((MCappr-trueval)^2)) / trueval
+    
+    # save results in row of matrix res
+    res[k-1,] <- c(dimension, k, num.nodes, SGerror, MCerror)
+}
+@
+The results for this comparison are given in the following table
+<<showResults>>=
+res
+@
+For this specific example we see that the error for sparse grid integration declines much more rapidly when increasing the number of nodes than the error when approximating the integral using Monte Carlo simulation.
+\bibliographystyle{apacite}
+\bibliography{reflist}
+
+\end{document}

@@ -1,0 +1,10 @@
+Package: SparseGrid
+Type: Package
+Title: Sparse grid integration in R
+Version: 0.8.0
+Date: 2011-11-27
+Author: Jelmer Ypma
+Maintainer: Jelmer Ypma <uctpjyy@ucl.ac.uk>
+Suggests: testthat, statmod, mvtnorm
+Description: SparseGrid is a package to create sparse grids for numerical integration, based on code from www.sparse-grids.de
+License: GPL
