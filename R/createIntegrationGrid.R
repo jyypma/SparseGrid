@@ -7,11 +7,11 @@
 #
 # Input: 
 # Output: 
+#
+# 14/05/2011: Removed check on argument 'type', because checking is done in createSparseGrid and createProductRuleGrid.
 
 # return grid with the least number of nodes, either sparse grid or product rule grid
 createIntegrationGrid <- function( type, dimension, k, sym = FALSE ) {
-    builtinfct <- type %in% c('GQU', 'GQN', 'KPU', 'KPN' )
-    stopifnot( builtinfct )
     
     integration.grid <- createSparseGrid( 
                                 type=type, 
