@@ -7,19 +7,32 @@
 #
 # Input: 
 # Output: 
+#
+# 14/05/2012: Fixed a bug related to checking of arguments when 'type' is a user-supplied function.
+#
 # TODO: check what happens when we have 1 dimension, should not return anything?
 # TODO: works only on built-in functions
+# TODO: check for sum(weights)==1 and length(weights)==nrow(nodes)
 
 # create integration grid according to product rule
 createProductRuleGrid <- function( type, dimension, k, sym = FALSE ) {
-
+    
     # assertions
-	# TODO: check for sum(weights)==1 and length(weights)==nrow(nodes)
-	if (! type %in% c('GQU', 'GQN', 'KPU', 'KPN' ) | is.function(type) ) {
-		stop( paste("createProductRuleGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
+    if (! as.integer(dimension) == dimension) {
+		stop( paste("createProductRuleGrid expects dimension to be integer, user supplied dimension = ", dimension, sep='') )
 	}
+	if (! as.integer(k) == k) {
+		stop( paste("createProductRuleGrid expects k to be integer, user supplied k = ", k, sep='') )
+	}
+	if (! is.logical(sym) | is.na(sym)) {
+		stop( paste("createProductRuleGrid expects sym to be logical, user supplied sym = ", sym, sep='') )
+	}
+    
+	# check if a function or a string was supplied
+    # builtinfct is a boolean defining whether 'type' is a built-in function (TRUE) or a user-supplied function (FALSE)
+    builtinfct <- FALSE
 	if ( is.function(type) ) {
-		if (! formals( type ) == 1 ) {
+		if (length( formals( type ) ) != 1 ) {
 			stop( "User supplied function (argument type) to createProductRuleGrid needs to have one argument." )
 		}
 		tmp.grid <- type( dimension )
@@ -30,24 +43,24 @@ createProductRuleGrid <- function( type, dimension, k, sym = FALSE ) {
 			stop( "User supplied function (argument type) to createProductRuleGrid needs to return a list." )
 		}
 		if (! "nodes" %in% names(tmp.grid) ) {
-			stop( "Elemenet 'nodes' not found in list returned by user supplied function (argument type) to createProductRuleGrid." )	
+			stop( "Element 'nodes' not found in list returned by user supplied function (argument type) to createProductRuleGrid." )	
 		}
 		if (! "weights" %in% names(tmp.grid) ) {
-			stop( "Elemenet 'weights' not found in list returned by user supplied function (argument type) to createProductRuleGrid." )	
+			stop( "Element 'weights' not found in list returned by user supplied function (argument type) to createProductRuleGrid." )	
 		}
 	}
-	if (! as.integer(dimension) == dimension) {
-		stop( paste("createProductRuleGrid expects dimension to be integer, user supplied dimension = ", dimension, sep='') )
-	}
-	if (! as.integer(k) == k) {
-		stop( paste("createProductRuleGrid expects k to be integer, user supplied k = ", k, sep='') )
-	}
-	if (! is.logical(sym) | is.na(sym)) {
-		stop( paste("createProductRuleGrid expects sym to be logical, user supplied sym = ", sym, sep='') )
-	}
-	
-	builtinfct <- type %in% c('GQU', 'GQN', 'KPU', 'KPN' )
-    stopifnot( builtinfct )
+    else if ( is.character(type) ) {
+        # input string is from the list of built-in functions?
+        builtinfct <- type %in% c('GQU', 'GQN', 'KPU', 'KPN' )
+        if ( builtinfct ) { 
+            sym = TRUE
+        } else {
+            stop( paste("createProductRuleGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
+        }
+    }
+    else {
+        stop( paste("createProductRuleGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
+    }
     
     grid1d <- createSparseGrid( type, 1, k )
 

@@ -1,0 +1,3 @@
+14 May 2012, version 0.8.1:
+
+    * Fixed a bug related to checking of arguments in createSparseGrid and createProductRuleGrid when 'type' is a user-supplied function (thanks to Marco Geraci for reporting).

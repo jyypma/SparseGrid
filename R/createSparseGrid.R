@@ -31,16 +31,29 @@
 #		nodes    	= matrix of nodes with dim columns 
 #     	weights    = row vector of corresponding weights
 #
+#
+# 14/05/2012: Fixed a bug related to checking of arguments when 'type' is a user-supplied function.
+#
+# TODO: check for sum(weights)==1 and length(weights)==nrow(nodes)
 
 createSparseGrid <- function(type, dimension, k, sym = FALSE) {
 
-	# assertions
-	# TODO: check for sum(weights)==1 and length(weights)==nrow(nodes)
-	if (! type %in% c('GQU', 'GQN', 'KPU', 'KPN' ) | is.function(type) ) {
-		stop( paste("createSparseGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
+    # assertions    
+	if (! as.integer(dimension) == dimension) {
+		stop( paste("createSparseGrid expects dimension to be integer, user supplied dimension = ", dimension, sep='') )
 	}
+	if (! as.integer(k) == k) {
+		stop( paste("createSparseGrid expects k to be integer, user supplied k = ", k, sep='') )
+	}
+	if (! is.logical(sym) | is.na(sym)) {
+		stop( paste("createSparseGrid expects sym to be logical, user supplied sym = ", sym, sep='') )
+	}
+    
+    # check if a function or a string was supplied
+    # builtinfct is a boolean defining whether 'type' is a built-in function (TRUE) or a user-supplied function (FALSE)
+    builtinfct <- FALSE
 	if ( is.function(type) ) {
-		if (! formals( type ) == 1 ) {
+		if (length( formals( type ) ) != 1 ) {
 			stop( "User supplied function (argument type) to createSparseGrid needs to have one argument." )
 		}
 		tmp.grid <- type( dimension )
@@ -51,26 +64,23 @@ createSparseGrid <- function(type, dimension, k, sym = FALSE) {
 			stop( "User supplied function (argument type) to createSparseGrid needs to return a list." )
 		}
 		if (! "nodes" %in% names(tmp.grid) ) {
-			stop( "Elemenet 'nodes' not found in list returned by user supplied function (argument type) to createSparseGrid." )	
+			stop( "Element 'nodes' not found in list returned by user supplied function (argument type) to createSparseGrid." )	
 		}
 		if (! "weights" %in% names(tmp.grid) ) {
-			stop( "Elemenet 'weights' not found in list returned by user supplied function (argument type) to createSparseGrid." )	
+			stop( "Element 'weights' not found in list returned by user supplied function (argument type) to createSparseGrid." )	
 		}
 	}
-	if (! as.integer(dimension) == dimension) {
-		stop( paste("createSparseGrid expects dimension to be integer, user supplied dimension = ", dimension, sep='') )
-	}
-	if (! as.integer(k) == k) {
-		stop( paste("createSparseGrid expects k to be integer, user supplied k = ", k, sep='') )
-	}
-	if (! is.logical(sym) | is.na(sym)) {
-		stop( paste("createSparseGrid expects sym to be logical, user supplied sym = ", sym, sep='') )
-	}
-	
-    # interpret inputs
-    builtinfct <- type %in% c('GQU', 'GQN', 'KPU', 'KPN' )
-    if ( builtinfct ) { 
-        sym = TRUE
+    else if ( is.character(type) ) {
+        # input string is from the list of built-in functions?
+        builtinfct <- type %in% c('GQU', 'GQN', 'KPU', 'KPN' )
+        if ( builtinfct ) { 
+            sym = TRUE
+        } else {
+            stop( paste("createSparseGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
+        }
+    }
+    else {
+        stop( paste("createSparseGrid expects type to be a string with values 'GQU', 'GQN', 'KPU', 'KPN', or a function, user supplied type = ", type, sep='') )
     }
 	
 	if ( !builtinfct & sym ) {
@@ -84,7 +94,13 @@ createSparseGrid <- function(type, dimension, k, sym = FALSE) {
         w1D <- vector( mode="list", length=k )
         R1D <- rep( 0, k )      # vector with zeros
         for ( level in 1:k ) {
-            res         <- eval(call(type,level))
+            if ( builtinfct ) {
+                # 'type' is a string
+                res         <- eval(call(type,level))
+            } else {
+                # 'type' is a function
+                res         <- type( level )
+            }
             nodes       <- res$nodes 
             weights     <- res$weights
             

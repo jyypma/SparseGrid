@@ -35,12 +35,12 @@ ghq.symmetric <- function(n)
 }
 
 #
-res1a <- createSparseGrid('ghq', 1, 5)
-res1b <- createSparseGrid('ghq.symmetric', 1, 5, sym=TRUE)	# misses one node, which is wrong
+res1a <- createSparseGrid(ghq, 1, 5)
+res1b <- createSparseGrid(ghq.symmetric, 1, 5, sym=TRUE)	# misses one node, which is wrong
 res1c <- createSparseGrid('GQN', 1, 5)
 
 # there is a duplicate node in res2a, because of rounding errors
 # 
-res2a <- createSparseGrid('ghq', 2, 3)						# has one duplicate node, which is slightly inefficient
-res2b <- createSparseGrid('ghq.symmetric', 2, 3, sym=TRUE)	# misses one node, which is wrong
+res2a <- createSparseGrid(ghq, 2, 3)						# has one duplicate node, which is slightly inefficient
+res2b <- createSparseGrid(ghq.symmetric, 2, 3, sym=TRUE)	# misses one node, which is wrong
 res2c <- createSparseGrid('GQN', 2, 3)
