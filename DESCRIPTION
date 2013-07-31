@@ -1,8 +1,8 @@
 Package: SparseGrid
 Type: Package
 Title: Sparse grid integration in R
-Version: 0.8.1
-Date: 2012-05-14
+Version: 0.8.2
+Date: 2012-07-31
 Author: Jelmer Ypma
 Maintainer: Jelmer Ypma <uctpjyy@ucl.ac.uk>
 Suggests: testthat, statmod, mvtnorm

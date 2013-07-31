@@ -1,3 +1,8 @@
+31 July 2013, version 0.8.2:
+
+    * Moved vignettes from inst/doc to vignettes to comply with new package rules.
+    * Removed dependency on apacite in vignette as an update of apacite on CRAN resulted in errors.
+
 14 May 2012, version 0.8.1:
 
     * Fixed a bug related to checking of arguments in createSparseGrid and createProductRuleGrid when 'type' is a user-supplied function (thanks to Marco Geraci for reporting).
