@@ -1,6 +1,6 @@
 \documentclass[a4paper]{article}
 \usepackage[english]{babel}
-\usepackage{apacite}
+\usepackage[round,authoryear,sort&compress]{natbib}
 \usepackage{graphicx}
 
 % \VignetteIndexEntry{Introduction to SparseGrid}
@@ -12,7 +12,7 @@
 
 
 \title{Introduction to \texttt{SparseGrid}
-\thanks{This package should be considered in beta and comments about any aspect of the package are welcome. This document is an R vignette prepared with the aid of \texttt{Sweave}, Leisch(2002).}}
+\thanks{This package should be considered in beta and comments about any aspect of the package are welcome. This document is an R vignette prepared with the aid of \texttt{Sweave} (Leisch, 2002).}}
 \author{Jelmer Ypma}
 
 \begin{document}
@@ -39,11 +39,11 @@ options(SweaveHooks=list(fig=function()
 @
 
 \begin{abstract}
-This vignette describes how to use \texttt{SparseGrid}, which is an R translation\footnote{Florian Heiss and Viktor Winschel kindly provided permission to make this R package based on their Matlab version publicly available.} of the Matlab code on \texttt{http://www.sparse-grids.de} \cite{HeissWinschel2008}. Sparse grids can be used to numerically approximate integrals of high dimension, with fewer nodes than grids constructed by a product rule.
+This vignette describes how to use \texttt{SparseGrid}, which is an R translation\footnote{Florian Heiss and Viktor Winschel kindly provided permission to make this R package based on their Matlab version publicly available.} of the Matlab code on \texttt{http://www.sparse-grids.de} \citep{HeissWinschel2008}. Sparse grids can be used to numerically approximate integrals of high dimension, with fewer nodes than grids constructed by a product rule.
 \end{abstract}
 
 \section{Introduction}
-Integrals arise in many places in statistics, for instance when calculating likelihood contributions in latent variable models (where some of the underlying variables are not observed), or when calculating conditional expectations or moments of functions of random variables. When an analytic solution to these integrals is not available, they have to be evaluated numerically. There are many texts providing a description of how to numerically approximate integrals \cite<e.g. see>[for an introduction to different approximation methods]{Judd1998,MirandaFackler2002}. Basically, many of the methods to approximate an integral in 1 dimension, rewrite the integral as a weighted sum
+Integrals arise in many places in statistics, for instance when calculating likelihood contributions in latent variable models (where some of the underlying variables are not observed), or when calculating conditional expectations or moments of functions of random variables. When an analytic solution to these integrals is not available, they have to be evaluated numerically. There are many texts providing a description of how to numerically approximate integrals \citep[e.g. see][for an introduction to different approximation methods]{Judd1998,MirandaFackler2002}. Basically, many of the methods to approximate an integral in 1 dimension, rewrite the integral as a weighted sum
 \[
 \int_{\Omega} g(x)f(x)dx \approx \sum_{r=1}^R w_r g(x_r),
 \]
@@ -111,11 +111,11 @@ cat("\\hline\\hline \n\\end{tabular} \n")
 \end{center}
 \end{table}
 
-\citeA{HeissWinschel2008} describe how sparse grids can be used to approximate multi-dimensional integrals, that occur for instance in estimation problems\footnote{Another way to deal with the curse of dimensionality is to use Monte Carlo metohds to approximate the integral.}. As an example they compare different ways of approximating the high-dimensional integrals that arise in mixed logit models. 
+\citet{HeissWinschel2008} describe how sparse grids can be used to approximate multi-dimensional integrals, that occur for instance in estimation problems\footnote{Another way to deal with the curse of dimensionality is to use Monte Carlo metohds to approximate the integral.}. As an example they compare different ways of approximating the high-dimensional integrals that arise in mixed logit models. 
 
 The benefit of using sparse grids, is that fewer integration nodes are needed than in the case of the product rule, except for low dimensional integrals. Table \ref{tab:NumNodesSparseGrid} shows the number of nodes that are needed for the two methods for different dimensions. For instance, in 8 dimensions the product rule uses \Sexpr{tab1[1,8]} integration nodes and sparse grid integration requires \Sexpr{tab1[2,8]} nodes.
 
-Of course, this reduction in number of integration nodes comes at a cost <see>[for details]{HeissWinschel2008}. The parameter, $k$, in table \ref{tab:NumNodesSparseGrid} controls the accuracy of the approximation. A sparse grid of accuracy $k$ can accurately integrate the function $g(x)$ if $g(x)$ is a polynomial of total order $2k-1$. For example, the polynomial
+Of course, this reduction in number of integration nodes comes at a cost \citep[see][for details]{HeissWinschel2008}. The parameter, $k$, in table \ref{tab:NumNodesSparseGrid} controls the accuracy of the approximation. A sparse grid of accuracy $k$ can accurately integrate the function $g(x)$ if $g(x)$ is a polynomial of total order $2k-1$. For example, the polynomial
 \[
 a_1 x_1^3 + a_2 x_1^2x_2 + a_3 x_1x_2^2 + + a_4x_1 + a_5x_2^2 + a_6 x_2^2 + a_7x_2^3,
 \]
@@ -263,7 +263,7 @@ The results for this comparison are given in the following table
 res
 @
 For this specific example we see that the error for sparse grid integration declines much more rapidly when increasing the number of nodes than the error when approximating the integral using Monte Carlo simulation.
-\bibliographystyle{apacite}
+\bibliographystyle{plainnat}
 \bibliography{reflist}
 
 \end{document}
